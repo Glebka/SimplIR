@@ -49,7 +49,7 @@ void send_rc5(uint16_t addr, uint16_t cmd)
 
 void send_samsung(uint16_t addr, uint16_t cmd)
 {
-  IrSender.sendSamsung(addr, cmd, 3);
+  IrSender.sendSamsung(addr, cmd, 0);
 }
 
 volatile uint8_t button_pins[Buttons::COUNT_] = {PD0, PD1, PD2, PD4, PD6};
@@ -61,8 +61,8 @@ ButtonHandler button_handlers[Buttons::COUNT_] = {
     {send_samsung, 0x707, 0x2},
     {send_rc5, 0xE, 0x3C},
     {send_rc5, 0xE, 0x11},
-    {send_rc5, 0xE, 0x12},
     {send_rc5, 0xE, 0x13},
+    {send_rc5, 0xE, 0x12},
 };
 
 void inc_tick()
@@ -107,7 +107,6 @@ void setup()
   PCMSK2 |= 0b01010111;
 
   IrSender.begin(true, LED_FEEDBACK_PIN);
-  setLEDFeedback(LED_FEEDBACK_PIN, LED_FEEDBACK_ENABLED_FOR_SEND);
   Timer1.initialize(TICK_INTERVAL);
   Timer1.attachInterrupt(inc_tick);
 }
@@ -173,10 +172,12 @@ void loop()
     if (button_pressed != Buttons::COUNT_)
     {
       sei();
+      Timer1.stop();
       ButtonHandler *handler_ptr = &button_handlers[button_pressed];
       handler_ptr->send(handler_ptr->addr, handler_ptr->cmd);
       ticks_since_last_event = 0;
       digitalWrite(LED_FEEDBACK_PIN, HIGH);
+      Timer1.start();
     }
     sei();
     if (ticks_since_last_event >= IDLE_TICKS_TIMEOUT)
